@@ -1,71 +1,119 @@
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
-  const [
-    totalClaims,
-    verifiedCount,
-    conflictingCount,
-    unverifiedCount,
-    policyExceptionCount,
-    claims,
-    recentDecisions,
-  ] = await Promise.all([
-    prisma.claim.count(),
-    prisma.claim.count({ where: { status: { in: ['VERIFIED', 'RECONSTRUCTED_VERIFIED'] } } }),
-    prisma.claim.count({ where: { status: 'CONFLICTING' } }),
-    prisma.claim.count({ where: { status: 'UNVERIFIED' } }),
-    prisma.claim.count({ where: { status: 'POLICY_EXCEPTION' } }),
-    prisma.claim.findMany({
-      select: { amount: true, status: true, category: true, date: true },
-    }),
-    prisma.decision.findMany({
+export const dynamic = 'force-dynamic';
+
+interface ClaimSummary {
+  id: string;
+  amount: number;
+  status: string;
+  category: string;
+  date: Date;
+}
+
+interface DecisionSummary {
+  id: string;
+  claimId: string;
+  actor: string;
+  role: string;
+  action: string;
+  reason: string | null;
+  evidenceSnapshot: string;
+  at: Date;
+  claim: {
+    merchantRaw: string;
+    amount: number;
+  } | null;
+}
+
+function formatCategory(cat: string | null | undefined): string {
+  if (!cat) return 'Other';
+  return cat
+    .split('_')
+    .map((w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export async function GET(): Promise<NextResponse> {
+  try {
+    const claims: ClaimSummary[] = await prisma.claim.findMany({
+      select: { id: true, amount: true, status: true, category: true, date: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const recentDecisions: DecisionSummary[] = await prisma.decision.findMany({
       take: 10,
       orderBy: { at: 'desc' },
       include: { claim: { select: { merchantRaw: true, amount: true } } },
-    }),
-  ]);
+    });
 
-  const moneyAtRisk = claims
-    .filter((c) => c.status === 'CONFLICTING' || c.status === 'UNVERIFIED')
-    .reduce((sum, c) => sum + c.amount, 0);
+    const totalClaims: number = claims.length;
+    const verifiedCount: number = claims.filter(
+      (c: ClaimSummary) => c.status === 'VERIFIED' || c.status === 'RECONSTRUCTED_VERIFIED'
+    ).length;
+    const conflictingCount: number = claims.filter(
+      (c: ClaimSummary) => c.status === 'CONFLICTING'
+    ).length;
+    const unverifiedCount: number = claims.filter(
+      (c: ClaimSummary) => c.status === 'UNVERIFIED'
+    ).length;
+    const policyExceptionCount: number = claims.filter(
+      (c: ClaimSummary) => c.status === 'POLICY_EXCEPTION'
+    ).length;
 
-  const totalAmount = claims.reduce((sum, c) => sum + c.amount, 0);
+    const moneyAtRisk: number = claims
+      .filter((c: ClaimSummary) => c.status === 'CONFLICTING' || c.status === 'UNVERIFIED')
+      .reduce((sum: number, c: ClaimSummary) => sum + (c.amount || 0), 0);
 
-  // Category breakdown
-  const categoryBreakdown = claims.reduce(
-    (acc, c) => {
-      acc[c.category] = (acc[c.category] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+    const totalAmount: number = claims.reduce(
+      (sum: number, c: ClaimSummary) => sum + (c.amount || 0),
+      0
+    );
 
-  // Status funnel
-  const statusFunnel = [
-    { status: 'Verified', count: verifiedCount, color: '#10b981' },
-    { status: 'Conflicting', count: conflictingCount, color: '#ef4444' },
-    { status: 'Unverified', count: unverifiedCount, color: '#f59e0b' },
-    { status: 'Policy Exception', count: policyExceptionCount, color: '#f97316' },
-  ];
+    // Category breakdown
+    const categoryMap: Record<string, number> = {};
+    for (const c of claims) {
+      const formatted: string = formatCategory(c.category);
+      categoryMap[formatted] = (categoryMap[formatted] || 0) + 1;
+    }
 
-  return NextResponse.json({
-    totalClaims,
-    verifiedCount,
-    conflictingCount,
-    unverifiedCount,
-    policyExceptionCount,
-    moneyAtRisk,
-    totalAmount,
-    verifiedRate: totalClaims > 0 ? Math.round((verifiedCount / totalClaims) * 100) : 0,
-    avgVerificationTime: '< 60s',
-    hoursSaved: Math.round(totalClaims * 0.75),
-    evidenceGaps: unverifiedCount,
-    categoryBreakdown: Object.entries(categoryBreakdown).map(([name, value]) => ({
-      name,
-      value,
-    })),
-    statusFunnel,
-    recentDecisions,
-  });
+    const categoryBreakdown: { name: string; value: number }[] = Object.entries(categoryMap).map(
+      ([name, value]: [string, number]) => ({
+        name,
+        value,
+      })
+    );
+
+    // Status funnel
+    const statusFunnel: { status: string; count: number; color: string }[] = [
+      { status: 'Verified', count: verifiedCount, color: '#10b981' },
+      { status: 'Conflicting', count: conflictingCount, color: '#ef4444' },
+      { status: 'Unverified', count: unverifiedCount, color: '#f59e0b' },
+      { status: 'Policy Exception', count: policyExceptionCount, color: '#f97316' },
+    ];
+
+    return NextResponse.json({
+      totalClaims,
+      verifiedCount,
+      conflictingCount,
+      unverifiedCount,
+      policyExceptionCount,
+      moneyAtRisk,
+      totalAmount,
+      verifiedRate: totalClaims > 0 ? Math.round((verifiedCount / totalClaims) * 100) : 0,
+      avgVerificationTime: '< 60s',
+      hoursSaved: Math.round(totalClaims * 0.75),
+      evidenceGaps: unverifiedCount,
+      categoryBreakdown,
+      statusFunnel,
+      recentDecisions,
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[GET /api/dashboard] Error:', message);
+    return NextResponse.json(
+      { error: 'Failed to fetch dashboard data', details: message },
+      { status: 500 }
+    );
+  }
 }

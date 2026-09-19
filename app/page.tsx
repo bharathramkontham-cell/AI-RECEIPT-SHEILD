@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Shield, FileCheck2, Search, BarChart3, FileText, ChevronRight, CheckCircle2, AlertOctagon, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Shield, FileCheck2, Search, BarChart3, FileText, ChevronRight, CheckCircle2, AlertOctagon, HelpCircle, AlertTriangle, Upload } from 'lucide-react';
 
 export default function LandingPage() {
   return (
@@ -40,13 +40,13 @@ export default function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5">
-          <Link href="/claims/clm-002" className="btn btn-primary text-[0.8125rem] px-5 py-2">
-            <Search className="w-4 h-4" />
-            See a live claim review
+          <Link href="/verify" className="btn btn-primary text-[0.8125rem] px-5 py-2">
+            <Upload className="w-4 h-4" />
+            Upload a Receipt
           </Link>
-          <Link href="/dashboard" className="btn btn-ghost text-[0.8125rem] px-5 py-2">
-            <BarChart3 className="w-4 h-4" />
-            View dashboard
+          <Link href="/claims/clm-002" className="btn btn-ghost text-[0.8125rem] px-5 py-2">
+            <Search className="w-4 h-4" />
+            See a live review
           </Link>
         </div>
       </section>

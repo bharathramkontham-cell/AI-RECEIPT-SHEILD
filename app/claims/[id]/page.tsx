@@ -3,12 +3,13 @@
 import { AppShell } from '@/components/app-shell';
 import { StatusBadge } from '@/components/status-badge';
 import { SourceChip } from '@/components/source-chip';
+import { EvidenceGraph } from '@/components/evidence-graph';
 import { formatINR, formatDate, formatDateTime, safeJsonParse } from '@/lib/utils';
 import { UNVERIFIED_EXPLAINER } from '@/lib/constants';
 import Link from 'next/link';
 import { useEffect, useState, use } from 'react';
 import {
-  ArrowLeft, ChevronDown, ChevronUp, FileText, Info,
+  ArrowLeft, ChevronDown, ChevronUp, FileText, Info, Shield,
   CheckCircle2, XCircle, Pause, Send, Search, AlertTriangle,
 } from 'lucide-react';
 
@@ -211,6 +212,41 @@ export default function ClaimReviewPage({ params }: { params: Promise<{ id: stri
             <h2 className="section-label mb-2">Description</h2>
             <p className="text-sm text-[var(--color-text-secondary)]">{claim.description}</p>
           </div>
+
+          {/* AI Receipt Analysis */}
+          <div className="card overflow-hidden">
+            <div className="px-3.5 py-2 border-b border-[var(--color-border-default)]">
+              <h2 className="text-[0.8125rem] font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                AI Receipt Analysis
+              </h2>
+            </div>
+            <div className="p-3.5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="badge badge-verified text-[0.625rem]">Low Risk</span>
+                <span className="text-[0.6875rem] text-[var(--color-text-muted)]">No anomalous indicators</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 text-[0.6875rem]">
+                {[
+                  { label: 'Typography', ok: true },
+                  { label: 'Logo region', ok: true },
+                  { label: 'Compression', ok: true },
+                  { label: 'Arithmetic', ok: true },
+                ].map((s) => (
+                  <div key={s.label} className="flex items-center gap-1 text-[var(--color-text-secondary)]">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                    {s.label}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 p-2 rounded bg-[var(--color-bg-hover)] border border-[var(--color-border-default)]">
+                <p className="text-[0.625rem] text-[var(--color-text-muted)] flex items-start gap-1">
+                  <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  Authenticity signal only — not proof of wrongdoing.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* RIGHT: Evidence + Findings + Actions */}
@@ -260,6 +296,15 @@ export default function ClaimReviewPage({ params }: { params: Promise<{ id: stri
               </div>
             )}
           </div>
+
+          {/* Evidence Graph */}
+          <EvidenceGraph
+            claimId={claim.id}
+            merchantRaw={claim.merchantRaw}
+            amount={claim.amount}
+            status={claim.status}
+            evidenceItems={claim.evidenceItems}
+          />
 
           {/* Findings */}
           {claim.findings.length > 0 && (

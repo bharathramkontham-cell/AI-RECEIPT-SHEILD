@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useCallback, useEffect } from 'react';
 import {
-  LayoutDashboard, FileText, Settings, Search, User, Shield, Menu, X, ChevronDown,
+  LayoutDashboard, FileText, Settings, Search, User, Shield, Menu, X, ChevronDown, Upload,
 } from 'lucide-react';
 
 const ROLES = ['Finance', 'Employee', 'Auditor', 'Admin'] as const;
@@ -19,17 +19,20 @@ const ROLE_DESCRIPTIONS: Record<Role, string> = {
 
 const NAV_ITEMS: Record<Role, { label: string; href: string; icon: React.ReactNode }[]> = {
   Admin: [
+    { label: 'Verify Expense', href: '/verify', icon: <Upload className="w-4 h-4" /> },
     { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { label: 'All Claims', href: '/claims', icon: <FileText className="w-4 h-4" /> },
     { label: 'Settings', href: '/admin', icon: <Settings className="w-4 h-4" /> },
     { label: 'Audit Log', href: '/auditor', icon: <Search className="w-4 h-4" /> },
   ],
   Finance: [
+    { label: 'Verify Expense', href: '/verify', icon: <Upload className="w-4 h-4" /> },
     { label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { label: 'Review Claims', href: '/claims', icon: <FileText className="w-4 h-4" /> },
     { label: 'Audit Log', href: '/auditor', icon: <Search className="w-4 h-4" /> },
   ],
   Employee: [
+    { label: 'Verify Expense', href: '/verify', icon: <Upload className="w-4 h-4" /> },
     { label: 'My Claims', href: '/employee', icon: <User className="w-4 h-4" /> },
   ],
   Auditor: [
