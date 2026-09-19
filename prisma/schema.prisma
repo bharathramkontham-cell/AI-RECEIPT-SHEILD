@@ -1,0 +1,159 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Employee {
+  id             String          @id @default(cuid())
+  empCode        String          @unique
+  name           String
+  dept           String
+  homeCity       String
+  cardLast4      String
+  claims         Claim[]
+  ledgerTxns     LedgerTxn[]
+  travelBookings TravelBooking[]
+}
+
+model Merchant {
+  id         String  @id @default(cuid())
+  name       String
+  aliases    String  // JSON array stored as string
+  gstOrVatNo String?
+  city       String
+  category   String
+  verified   Boolean @default(true)
+}
+
+model Claim {
+  id               String            @id @default(cuid())
+  empId            String
+  employee         Employee          @relation(fields: [empId], references: [id])
+  merchantRaw      String
+  amount           Float
+  currency         String            @default("INR")
+  date             DateTime
+  category         String
+  description      String
+  receiptFileKey   String?
+  receiptId        String?
+  status           String            @default("PENDING")
+  riskLevel        String            @default("UNKNOWN")
+  createdAt        DateTime          @default(now())
+  extraction       Extraction?
+  evidenceItems    EvidenceItem[]
+  findings         Finding[]
+  caseFile         CaseFile?
+  decisions        Decision[]
+  evidenceRequests EvidenceRequest[]
+}
+
+model Extraction {
+  id              String  @id @default(cuid())
+  claimId         String  @unique
+  claim           Claim   @relation(fields: [claimId], references: [id])
+  fields          String  // JSON: {merchant, amount, date, taxNo, receiptId}
+  confidence      String  // JSON: per-field confidence
+  correctedByUser Boolean @default(false)
+}
+
+model EvidenceItem {
+  id        String   @id @default(cuid())
+  claimId   String
+  claim     Claim    @relation(fields: [claimId], references: [id])
+  source    String
+  kind      String
+  status    String
+  detail    String   // JSON
+  summary   String
+  fetchedAt DateTime @default(now())
+}
+
+model Finding {
+  id        String @id @default(cuid())
+  claimId   String
+  claim     Claim  @relation(fields: [claimId], references: [id])
+  rank      Int
+  title     String
+  detail    String
+  sourceRef String
+  severity  String
+}
+
+model CaseFile {
+  id                String   @id @default(cuid())
+  claimId           String   @unique
+  claim             Claim    @relation(fields: [claimId], references: [id])
+  decisionStatus    String
+  recommendedAction String
+  generatedAt       DateTime @default(now())
+}
+
+model Decision {
+  id               String   @id @default(cuid())
+  claimId          String
+  claim            Claim    @relation(fields: [claimId], references: [id])
+  actor            String
+  role             String
+  action           String
+  reason           String?
+  evidenceSnapshot String   // JSON
+  at               DateTime @default(now())
+}
+
+model EvidenceRequest {
+  id             String    @id @default(cuid())
+  claimId        String
+  claim          Claim     @relation(fields: [claimId], references: [id])
+  requestedItems String    // JSON array
+  deadline       DateTime
+  message        String
+  sentAt         DateTime  @default(now())
+  respondedAt    DateTime?
+}
+
+model PolicyRule {
+  id       String @id @default(cuid())
+  category String
+  field    String
+  op       String
+  value    String
+  severity String
+  name     String
+  docRef   String
+}
+
+model LedgerTxn {
+  id           String   @id @default(cuid())
+  empId        String
+  employee     Employee @relation(fields: [empId], references: [id])
+  cardLast4    String
+  amount       Float
+  date         DateTime
+  merchantName String
+  txnRef       String   @unique
+}
+
+model TravelBooking {
+  id         String   @id @default(cuid())
+  empId      String
+  employee   Employee @relation(fields: [empId], references: [id])
+  city       String
+  startDate  DateTime
+  endDate    DateTime
+  bookingRef String   @unique
+  hotel      String?
+}
+
+model InvoicePO {
+  id           String @id @default(cuid())
+  vendor       String
+  poTotal      Float
+  invoiceTotal Float
+  paymentTotal Float
+  items        String // JSON
+}
