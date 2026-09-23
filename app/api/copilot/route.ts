@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { prisma } from '@/lib/db';
 import { GoogleGenAI } from '@google/genai';
 
 export async function POST(request: Request) {
@@ -14,19 +14,19 @@ export async function POST(request: Request) {
       const ai = new GoogleGenAI({ apiKey });
       
       // Fetch context
-      const claims = await db.claim.findMany({
+      const claims = await prisma.claim.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
         include: { employee: true, findings: true }
       });
       
-      const contextStr = JSON.stringify(claims.map(c => ({
+      const contextStr = JSON.stringify(claims.map((c: any) => ({
         id: c.id,
         merchant: c.merchantRaw,
         amount: c.amount,
         status: c.status,
         employee: c.employee.name,
-        findings: c.findings.map(f => f.title)
+        findings: c.findings.map((f: any) => f.title)
       })));
 
       const systemInstruction = `You are the AI Receipt Shield Auditor Copilot. Answer questions based on this recent claims data: ${contextStr}`;
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       let reply = "I'm analyzing the data...";
 
       if (lastMessage.includes('risk') || lastMessage.includes('flag')) {
-        const conflicting = await db.claim.count({ where: { status: 'CONFLICTING' } });
+        const conflicting = await prisma.claim.count({ where: { status: 'CONFLICTING' } });
         reply = `I see ${conflicting} claims currently marked as CONFLICTING. The most critical issue right now is clm-002 (The Taj Mahal Palace) where the ledger amount (18,750 INR) doesn't match the receipt amount.`;
       } else if (lastMessage.includes('email') || lastMessage.includes('draft')) {
         reply = "Here is a draft you can send:\n\nSubject: Clarification needed on recent expense\n\nHi [Employee],\nWe noticed a discrepancy in the receipt uploaded for the Taj Mahal Palace on Oct 12. Could you please provide the final folio or clarify the room charges vs. meals?\n\nThanks,\nFinance Team";

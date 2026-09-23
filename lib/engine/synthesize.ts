@@ -37,6 +37,16 @@ export function synthesizeStatus(
 
   const hasCriticalFinding = findings.some((f) => f.severity === 'CRITICAL');
 
+  // Rule 0: Zero-Tolerance Forgery & AI Generation Policy
+  const forgeryFinding = findings.find(f => f.sourceRef === 'VISUAL_FORENSICS' && f.severity === 'CRITICAL');
+  if (forgeryFinding) {
+    return {
+      claimStatus: 'CONFLICTING',
+      riskLevel: 'CRITICAL',
+      recommendedAction: `REJECT & INVESTIGATE — Document failed visual forensics. Reason: ${forgeryFinding.detail}. This is a critical violation of corporate policy.`,
+    };
+  }
+
   // Rule 1: Any conflicting evidence
   if (hasConflicting || hasCriticalFinding) {
     return {

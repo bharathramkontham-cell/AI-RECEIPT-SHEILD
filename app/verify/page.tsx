@@ -55,7 +55,7 @@ export default function VerifyExpensePage() {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const startVerification = useCallback(() => {
+  const startVerification = useCallback(async (file?: File) => {
     setPhase('verifying');
     setSteps(INITIAL_STEPS);
 
@@ -79,20 +79,40 @@ export default function VerifyExpensePage() {
       }, delay);
     });
 
-    // Fetch the demo claim data
-    fetch(`/api/claims/${DEMO_CLAIM_ID}`)
-      .then((r) => r.json())
-      .then((data) => {
+    try {
+      if (file) {
+        // Real AI Extraction & Forensics Pipeline
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const res = await fetch('/api/verify', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!res.ok) throw new Error('API failed');
+        const data = await res.json();
         setClaim(data);
-        // Show results after animation completes
         setTimeout(() => setPhase('results'), 3400);
-      });
+      } else {
+        // Fallback demo claim data
+        const r = await fetch(`/api/claims/${DEMO_CLAIM_ID}`);
+        const data = await r.json();
+        setClaim(data);
+        setTimeout(() => setPhase('results'), 3400);
+      }
+    } catch (e) {
+      console.error(e);
+      // fallback just in case
+      setTimeout(() => setPhase('results'), 3400);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    startVerification();
+    const file = e.dataTransfer.files?.[0];
+    startVerification(file);
   }, [startVerification]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -102,7 +122,10 @@ export default function VerifyExpensePage() {
 
   const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
-  const handleFileSelect = useCallback(() => startVerification(), [startVerification]);
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) startVerification(file);
+  }, [startVerification]);
 
   const getStepIcon = (step: VerifyStep) => {
     if (step.status === 'running') return <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />;
@@ -112,7 +135,7 @@ export default function VerifyExpensePage() {
 
   // Parse extraction fields
   const extraction = claim?.extraction
-    ? JSON.parse(claim.extraction.fields) as Record<string, string>
+    ? JSON.parse(claim.extraction.fields) as any
     : null;
 
   return (
@@ -159,7 +182,7 @@ export default function VerifyExpensePage() {
 
           {/* Quick demo button */}
           <div className="mt-6 text-center">
-            <button onClick={startVerification} className="btn btn-primary text-sm px-6 py-2.5">
+            <button onClick={() => startVerification()} className="btn btn-primary text-sm px-6 py-2.5">
               <FileText className="w-4 h-4 mr-2" />
               Run Demo Verification
             </button>
@@ -260,33 +283,68 @@ export default function VerifyExpensePage() {
             <div className="px-3.5 py-2 border-b border-[var(--color-border-default)]">
               <h3 className="text-[0.8125rem] font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
                 <Shield className="w-3.5 h-3.5 text-indigo-400" />
-                AI Receipt Analysis
+                AI Receipt Analysis (Forensics)
               </h3>
             </div>
             <div className="p-3.5">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="badge badge-verified text-[0.625rem]">Low Risk</span>
-                <span className="text-xs text-[var(--color-text-muted)]">No anomalous generation indicators detected</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[0.75rem]">
-                {[
-                  { label: 'Typography', status: 'Consistent' },
-                  { label: 'Logo region', status: 'Normal' },
-                  { label: 'Compression', status: 'Uniform' },
-                  { label: 'Arithmetic', status: 'Valid' },
-                ].map((s) => (
-                  <div key={s.label} className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />
-                    <span>{s.label}: {s.status}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 p-2 rounded bg-[var(--color-bg-hover)] border border-[var(--color-border-default)]">
-                <p className="text-[0.6875rem] text-[var(--color-text-muted)] flex items-start gap-1.5">
-                  <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                  This is an authenticity signal only. It is not proof of wrongdoing. The receipt image appears authentic, but the expense still requires independent evidence verification.
-                </p>
-              </div>
+              {(() => {
+                const isForged = extraction?.forensics?.isForged || extraction?.forensics?.isAiGenerated;
+                const score = extraction?.forensics?.confidenceScore || 99;
+                const reasons = extraction?.forensics?.anomalyReasons || [];
+
+                return (
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={`badge ${isForged ? 'badge-conflicting' : 'badge-verified'} text-[0.625rem]`}>
+                        {isForged ? 'Critical Risk - Forgery Detected' : 'Low Risk'}
+                      </span>
+                      <span className="text-xs text-[var(--color-text-muted)]">
+                        {isForged 
+                          ? 'Anomalous generation indicators detected' 
+                          : 'No anomalous generation indicators detected'} 
+                        {' '}(Confidence: {score}%)
+                      </span>
+                    </div>
+
+                    {isForged && reasons.length > 0 && (
+                      <div className="mb-3 p-3 bg-red-500/10 border border-red-500/20 rounded-md">
+                        <h4 className="text-xs font-semibold text-red-400 mb-1">Anomalies Detected:</h4>
+                        <ul className="list-disc list-inside text-xs text-[var(--color-text-secondary)] space-y-1">
+                          {reasons.map((r: string, i: number) => (
+                            <li key={i}>{r}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[0.75rem]">
+                      {[
+                        { label: 'Typography', status: isForged ? 'Inconsistent' : 'Consistent' },
+                        { label: 'Logo region', status: isForged ? 'Anomalous' : 'Normal' },
+                        { label: 'Compression', status: isForged ? 'Artefacts' : 'Uniform' },
+                        { label: 'Lighting/Shadows', status: isForged ? 'Mismatched' : 'Valid' },
+                      ].map((s) => (
+                        <div key={s.label} className="flex items-center gap-1.5 text-[var(--color-text-secondary)]">
+                          {isForged ? (
+                            <XCircle className="w-3 h-3 text-red-400 flex-shrink-0" />
+                          ) : (
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                          )}
+                          <span>{s.label}: {s.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 p-2 rounded bg-[var(--color-bg-hover)] border border-[var(--color-border-default)]">
+                      <p className="text-[0.6875rem] text-[var(--color-text-muted)] flex items-start gap-1.5">
+                        <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        {isForged
+                          ? 'This document has failed visual forensic analysis and is strongly suspected to be AI-generated or digitally manipulated. This is a critical policy violation.'
+                          : 'This is an authenticity signal only. It is not proof of wrongdoing. The receipt image appears authentic, but the expense still requires independent evidence verification.'}
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 

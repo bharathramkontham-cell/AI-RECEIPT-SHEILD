@@ -15,12 +15,20 @@ export interface ClaimData {
   receiptFileKey: string | null;
 }
 
+export interface VisualForensics {
+  isAiGenerated: boolean;
+  isForged: boolean;
+  confidenceScore: number;
+  anomalyReasons: string[];
+}
+
 export interface ExtractionData {
   merchant: string;
   amount: number;
   date: string;
   taxNo: string;
   receiptId: string;
+  forensics?: VisualForensics;
 }
 
 export interface ConfidenceData {
