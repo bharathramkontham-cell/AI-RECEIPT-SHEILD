@@ -155,22 +155,31 @@ export default function VerifyExpensePage() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
-            className={`card cursor-pointer border-2 border-dashed p-12 text-center transition-all ${
+            className={`card cursor-pointer relative overflow-hidden p-12 text-center transition-all duration-300 transform ${
               isDragging
-                ? 'border-indigo-500/50 bg-indigo-500/5'
-                : 'border-[var(--color-border-default)] hover:border-[var(--color-border-hover)]'
+                ? 'scale-[1.02] border-indigo-500 shadow-[0_0_40px_-10px_rgba(99,102,241,0.5)]'
+                : 'hover:scale-[1.01] hover:shadow-[0_0_30px_-10px_rgba(99,102,241,0.3)]'
             }`}
             role="button"
             tabIndex={0}
             aria-label="Upload receipt"
           >
-            <Upload className={`w-10 h-10 mx-auto mb-4 transition-colors ${isDragging ? 'text-indigo-400' : 'text-[var(--color-text-muted)]'}`} />
-            <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
-              Drop receipt here or click to upload
-            </p>
-            <p className="text-xs text-[var(--color-text-muted)]">
-              Supports PDF, PNG, JPEG, TIFF
-            </p>
+            {/* Glowing background layer */}
+            <div className={`absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent opacity-0 transition-opacity duration-500 ${isDragging ? 'opacity-100' : 'group-hover:opacity-100'}`} />
+            
+            <div className="relative z-10">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center transition-colors duration-300 ${
+                isDragging ? 'bg-indigo-500/20 text-indigo-400' : 'bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]'
+              }`}>
+                <Upload className={`w-8 h-8 transition-transform duration-300 ${isDragging ? 'scale-110' : ''}`} />
+              </div>
+              <p className="text-[0.9375rem] font-medium text-[var(--color-text-primary)] mb-1.5">
+                Drop receipt here or <span className="text-indigo-400">browse</span>
+              </p>
+              <p className="text-[0.75rem] text-[var(--color-text-muted)]">
+                Supports PDF, PNG, JPEG, TIFF (Max 10MB)
+              </p>
+            </div>
             <input
               ref={fileInputRef}
               type="file"

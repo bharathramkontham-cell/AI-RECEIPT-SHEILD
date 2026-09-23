@@ -387,15 +387,16 @@ export default function DashboardPage() {
       </div>
 
       {/* Verify CTA */}
-      <Link href="/verify" className="card card-interactive p-3.5 mb-5 flex items-center gap-3 group">
-        <div className="p-2 rounded-lg bg-indigo-500/10">
-          <Upload className="w-4 h-4 text-indigo-400" />
+      <Link href="/verify" className="card card-interactive p-3.5 mb-5 flex items-center gap-3 group relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="p-2 rounded-lg bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors z-10">
+          <Upload className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform duration-300" />
         </div>
-        <div className="flex-1">
-          <div className="text-[0.8125rem] font-medium text-[var(--color-text-primary)]">Verify a New Expense</div>
+        <div className="flex-1 z-10">
+          <div className="text-[0.8125rem] font-medium text-[var(--color-text-primary)] group-hover:text-indigo-400 transition-colors">Verify a New Expense</div>
           <div className="text-[0.6875rem] text-[var(--color-text-muted)]">Upload a receipt to start evidence-based verification</div>
         </div>
-        <ArrowRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-indigo-400 transition-colors" />
+        <ArrowRight className="w-4 h-4 text-[var(--color-text-muted)] group-hover:text-indigo-400 group-hover:translate-x-1 transition-all z-10" />
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
