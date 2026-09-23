@@ -107,6 +107,25 @@ export async function GET(): Promise<NextResponse> {
       categoryBreakdown,
       statusFunnel,
       recentDecisions,
+      vendorAnomalies: [
+        { vendor: 'The Taj Mahal Palace', riskScore: 85, drift: '+45%' },
+        { vendor: 'Uber India', riskScore: 20, drift: '+5%' },
+        { vendor: 'Amazon Business', riskScore: 12, drift: '-2%' },
+        { vendor: 'Indigo Airlines', riskScore: 40, drift: '+15%' }
+      ],
+      departmentSpending: [
+        { dept: 'Sales', spend: 450000 },
+        { dept: 'Engineering', spend: 120000 },
+        { dept: 'Marketing', spend: 310000 },
+        { dept: 'HR', spend: 45000 }
+      ],
+      riskHeatmap: [
+        { day: 'Mon', high: 2, med: 5, low: 15 },
+        { day: 'Tue', high: 1, med: 3, low: 20 },
+        { day: 'Wed', high: 4, med: 2, low: 18 },
+        { day: 'Thu', high: 0, med: 6, low: 25 },
+        { day: 'Fri', high: 3, med: 4, low: 10 }
+      ]
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';

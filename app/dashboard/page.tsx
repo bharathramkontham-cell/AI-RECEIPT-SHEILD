@@ -7,9 +7,10 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import {
   CheckCircle2, AlertOctagon, AlertTriangle,
-  TrendingUp, DollarSign, FileText, ArrowRight, Upload,
+  TrendingUp, DollarSign, FileText, ArrowRight, Upload, Map, AlertCircle, ShieldAlert
 } from 'lucide-react';
-// Native SVG charts used for zero-dependency React 19 compatibility
+import { AICopilot } from '@/components/ai-copilot';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface DashboardData {
   totalClaims: number;
@@ -25,6 +26,9 @@ interface DashboardData {
   evidenceGaps: number;
   statusFunnel: { status: string; count: number; color: string }[];
   categoryBreakdown: { name: string; value: number }[];
+  vendorAnomalies: { vendor: string; riskScore: number; drift: string }[];
+  departmentSpending: { dept: string; spend: number }[];
+  riskHeatmap: { day: string; high: number; med: number; low: number }[];
 }
 
 interface ClaimRow {
@@ -163,6 +167,7 @@ export default function DashboardPage() {
   const categoryBreakdown = data.categoryBreakdown || [];
 
   return (
+    <>
     <AppShell>
       {/* Header */}
       <div className="mb-5">
@@ -213,6 +218,72 @@ export default function DashboardPage() {
               </div>
             );
           })}
+        </div>
+      </div>
+      {/* Analytics Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-5">
+        
+        {/* Department Spending Velocity */}
+        <div className="card overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-[var(--color-border-default)]">
+            <h2 className="text-[0.8125rem] font-semibold text-[var(--color-text-primary)]">Department Spend</h2>
+          </div>
+          <div className="h-48 p-4 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.departmentSpending || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="dept" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val/1000}k`} />
+                <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e1e24', borderColor: '#3f3f46', fontSize: '12px' }} />
+                <Bar dataKey="spend" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Vendor Risk Anomalies */}
+        <div className="card overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-[var(--color-border-default)]">
+            <h2 className="text-[0.8125rem] font-semibold text-[var(--color-text-primary)]">Vendor Risk Anomalies</h2>
+          </div>
+          <div className="p-3.5 space-y-3">
+            {(data.vendorAnomalies || []).map((anomaly) => (
+              <div key={anomaly.vendor} className="flex justify-between items-center bg-[var(--color-bg-hover)] p-2 rounded-lg border border-[var(--color-border-default)]">
+                <div>
+                  <div className="text-[0.75rem] text-[var(--color-text-primary)] font-medium">{anomaly.vendor}</div>
+                  <div className="text-[0.625rem] text-[var(--color-text-muted)] flex items-center gap-1">
+                    Drift: <span className={anomaly.drift.startsWith('+') ? 'text-red-400' : 'text-emerald-400'}>{anomaly.drift}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <div className="text-[0.875rem] font-mono font-bold" style={{ color: anomaly.riskScore > 50 ? '#ef4444' : anomaly.riskScore > 25 ? '#f59e0b' : '#10b981' }}>
+                    {anomaly.riskScore}
+                  </div>
+                  <div className="text-[0.5rem] uppercase text-[var(--color-text-muted)] tracking-wider">Risk Score</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Risk Heatmap */}
+        <div className="card overflow-hidden">
+          <div className="px-3.5 py-2.5 border-b border-[var(--color-border-default)]">
+            <h2 className="text-[0.8125rem] font-semibold text-[var(--color-text-primary)]">Risk Heatmap (7D)</h2>
+          </div>
+          <div className="h-48 p-4 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={data.riskHeatmap || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.2)" fontSize={10} tickLine={false} axisLine={false} />
+                <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e1e24', borderColor: '#3f3f46', fontSize: '12px' }} />
+                <Bar dataKey="high" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="med" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="low" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
@@ -446,7 +517,10 @@ export default function DashboardPage() {
             </tbody>
           </table>
         </div>
+        </div>
       </div>
     </AppShell>
+    <AICopilot />
+    </>
   );
 }
